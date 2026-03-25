@@ -91,7 +91,7 @@ vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = false
+vim.g.have_nerd_font = true
 
 -- [[ Setting options ]]
 -- See `:help vim.o`
@@ -257,6 +257,40 @@ rtp:prepend(lazypath)
 require('lazy').setup({
   -- NOTE: Plugins can be added via a link or github org/name. To run setup automatically, use `opts = {}`
   { 'NMAC427/guess-indent.nvim', opts = {} },
+
+  {
+    '3rd/image.nvim',
+    opts = {
+      backend = 'kitty', -- Explicitly tell it to use Kitty's image protocol
+      max_width = 100,
+      max_height = 12,
+      max_width_window_percentage = math.huge,
+      max_height_window_percentage = math.huge,
+      window_overlap_clear_enabled = true,
+      window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', '' },
+    },
+  },
+
+  {
+    'benlubas/molten-nvim',
+    version = '^1.0.0', -- Use version <2.0.0 to avoid breaking changes
+    dependencies = { '3rd/image.nvim' },
+    build = ':UpdateRemotePlugins',
+    init = function()
+      -- These are the recommended settings for Molten + Kitty
+      vim.g.molten_image_provider = 'image.nvim'
+      vim.g.molten_output_win_max_height = 20
+      -- Prevent the output from aggressively opening a new window for every print statement
+      vim.g.molten_auto_open_output = false
+    end,
+    keys = {
+      { '<leader>mi', ':MoltenInit<CR>', desc = '[M]olten [I]nitialize' },
+      { '<leader>me', ':MoltenEvaluateVisual<CR>gv', mode = 'v', desc = '[M]olten [E]valuate Visual' },
+      { '<leader>ml', ':MoltenEvaluateLine<CR>', desc = '[M]olten Evaluate [L]ine' },
+      { '<leader>mo', ':MoltenShowOutput<CR>', desc = '[M]olten [O]utput' },
+      { '<leader>md', ':MoltenDelete<CR>', desc = '[M]olten [D]elete Cell' },
+    },
+  },
 
   -- Alternatively, use `config = function() ... end` for full control over the configuration.
   -- If you prefer to call `setup` explicitly, use:
@@ -602,7 +636,21 @@ require('lazy').setup({
       local servers = {
         -- clangd = {},
         -- gopls = {},
-        -- pyright = {},
+        pyright = {
+          settings = {
+            pyright = {
+              -- Using Ruff's import organizer instead
+              disableOrganizeImports = true,
+            },
+            python = {
+              analysis = {
+                typeCheckingMode = 'basic', -- Set to 'strict' if you want heavy type checking
+              },
+            },
+          },
+        },
+        ruff = {},
+
         -- rust_analyzer = {},
         --
         -- Some languages (like typescript) have entire language plugins that can be useful:
@@ -697,7 +745,7 @@ require('lazy').setup({
       formatters_by_ft = {
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
-        -- python = { "isort", "black" },
+        python = { 'ruff_fix', 'ruff_format', 'ruff_organize_imports' },
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
         -- javascript = { "prettierd", "prettier", stop_after_first = true },
@@ -874,7 +922,7 @@ require('lazy').setup({
     branch = 'main',
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter-intro`
     config = function()
-      local parsers = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
+      local parsers = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'python' }
       require('nvim-treesitter').install(parsers)
       vim.api.nvim_create_autocmd('FileType', {
         callback = function(args)
@@ -950,3 +998,35 @@ require('lazy').setup({
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
+
+-- [[ Custom ML Workflow: Execute Python Cells ]]
+-- This function identifies blocks of code bounded by `#%%` and sends them to Molten.
+local function evaluate_python_cell()
+  -- 1. Find the start of the cell (search backwards for #%%)
+  local start_line = vim.fn.search('^#\\s*%%', 'bWn')
+  if start_line == 0 then
+    start_line = 1 -- If no #%% above, start from the top of the file
+  else
+    start_line = start_line + 1 -- Start evaluating *after* the #%% line
+  end
+
+  -- 2. Find the end of the cell (search forwards for #%%)
+  local end_line = vim.fn.search('^#\\s*%%', 'Wn')
+  if end_line == 0 then
+    end_line = vim.fn.line '$' -- If no #%% below, go to the end of the file
+  else
+    end_line = end_line - 1 -- End evaluating *before* the next #%% line
+  end
+
+  -- 3. Execute the range using Molten
+  if start_line <= end_line then
+    -- MoltenEvaluateVisual accepts a line range in standard Vim command format
+    vim.cmd(tostring(start_line) .. ',' .. tostring(end_line) .. 'MoltenEvaluateVisual')
+    print('🚀 Evaluated cell: Lines ' .. start_line .. ' to ' .. end_line)
+  else
+    print '⚠️ No valid cell found.'
+  end
+end
+
+-- Map Shift+Enter (<S-CR>) to run the cell in normal mode
+vim.keymap.set('n', '<S-CR>', evaluate_python_cell, { desc = 'Evaluate Python Cell (Molten)' })
