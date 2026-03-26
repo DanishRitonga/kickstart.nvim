@@ -256,39 +256,100 @@ rtp:prepend(lazypath)
 -- NOTE: Here is where you install your plugins.
 require('lazy').setup({
   -- NOTE: Plugins can be added via a link or github org/name. To run setup automatically, use `opts = {}`
+  {
+    'folke/lazydev.nvim',
+    ft = 'lua', -- only load on lua files
+    opts = {
+      library = {
+        -- Load luvit types when the `vim.uv` word is found
+        { path = '${3rd}/luv/library', words = { 'vim%.uv' } },
+      },
+    },
+  },
+
   { 'NMAC427/guess-indent.nvim', opts = {} },
 
   {
-    '3rd/image.nvim',
-    opts = {
-      backend = 'kitty', -- Explicitly tell it to use Kitty's image protocol
-      max_width = 100,
-      max_height = 12,
-      max_width_window_percentage = math.huge,
-      max_height_window_percentage = math.huge,
-      window_overlap_clear_enabled = true,
-      window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', '' },
+    'Vigemus/iron.nvim',
+    main = 'iron.core',
+    opts = function()
+      local view = require 'iron.view'
+      return {
+        config = {
+          -- Whether the given repl should be a scratch buffer
+          scratch_repl = true,
+          -- How the repl window will be displayed (50 columns vertical split)
+          repl_open_cmd = view.split.vertical.botright(50),
+          repl_definition = {
+            python = {
+              -- Use IPython for better history and formatting
+              command = { 'ipython', '--no-autoindent' },
+              format = require('iron.fts.common').bracketed_paste_python,
+            },
+          },
+        },
+        -- Iron doesn't set keymaps by default anymore.
+        -- You can customize these core motions if you like.
+        keymaps = {
+          send_motion = '<leader>ic',
+          send_line = '<leader>il',
+          visual_send = '<leader>iv',
+        },
+      }
+    end,
+    keys = {
+      { '<leader>is', '<cmd>IronRepl<cr>', desc = '[I]ron [S]tart REPL' },
+      { '<leader>ir', '<cmd>IronRestart<cr>', desc = '[I]ron [R]estart' },
+      { '<leader>if', '<cmd>IronFocus<cr>', desc = '[I]ron [F]ocus' },
+      { '<leader>ih', '<cmd>IronHide<cr>', desc = '[I]ron [H]ide' },
     },
   },
 
   {
-    'benlubas/molten-nvim',
-    version = '^1.0.0', -- Use version <2.0.0 to avoid breaking changes
-    dependencies = { '3rd/image.nvim' },
-    build = ':UpdateRemotePlugins',
-    init = function()
-      -- These are the recommended settings for Molten + Kitty
-      vim.g.molten_image_provider = 'image.nvim'
-      vim.g.molten_output_win_max_height = 20
-      -- Prevent the output from aggressively opening a new window for every print statement
-      vim.g.molten_auto_open_output = false
-    end,
+    'nvim-neo-tree/neo-tree.nvim',
+    version = '*',
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      'nvim-tree/nvim-web-devicons', -- for VS Code like file icons
+      'MunifTanjim/nui.nvim',
+    },
+    cmd = 'Neotree',
     keys = {
-      { '<leader>mi', ':MoltenInit<CR>', desc = '[M]olten [I]nitialize' },
-      { '<leader>me', ':MoltenEvaluateVisual<CR>gv', mode = 'v', desc = '[M]olten [E]valuate Visual' },
-      { '<leader>ml', ':MoltenEvaluateLine<CR>', desc = '[M]olten Evaluate [L]ine' },
-      { '<leader>mo', ':MoltenShowOutput<CR>', desc = '[M]olten [O]utput' },
-      { '<leader>md', ':MoltenDelete<CR>', desc = '[M]olten [D]elete Cell' },
+      -- Map <leader>e to toggle the file explorer
+      { '<leader>e', ':Neotree toggle<CR>', desc = 'Toggle [E]xplorer', silent = true },
+      -- Map \ to reveal the current file in the explorer
+      { '\\', ':Neotree reveal<CR>', desc = 'Reveal in Explorer', silent = true },
+    },
+    opts = {
+      filesystem = {
+        -- Make it look more like VS Code
+        hijack_netrw_behavior = 'open_default',
+        use_libuv_file_watcher = true,
+        filtered_items = {
+          visible = false, -- Hide dotfiles by default
+          hide_dotfiles = true,
+          hide_gitignored = true,
+        },
+        window = {
+          position = 'left',
+          width = 30,
+          mappings = {
+            ['<space>'] = 'none',
+            ['l'] = 'open',
+            ['h'] = 'close_node',
+
+            ['<Right>'] = 'open',
+            ['<Left>'] = 'close_node',
+          },
+        },
+      },
+      default_component_configs = {
+        indent = {
+          with_expanders = true, -- if nil and file nesting is enabled, will enable expanders
+          expander_collapsed = '',
+          expander_expanded = '',
+        },
+      },
     },
   },
 
@@ -307,6 +368,26 @@ require('lazy').setup({
   -- options to `gitsigns.nvim`.
   --
   -- See `:help gitsigns` to understand what the configuration keys do
+  {
+    'kdheepak/lazygit.nvim',
+    lazy = true,
+    cmd = {
+      'LazyGit',
+      'LazyGitConfig',
+      'LazyGitCurrentFile',
+      'LazyGitFilter',
+      'LazyGitFilterCurrentFile',
+    },
+    -- Optional for floating window border decoration
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+    },
+    -- Setting the keybinding directly loads the plugin only when you need it
+    keys = {
+      { '<leader>gg', '<cmd>LazyGit<cr>', desc = 'Open [G]it [G]UI (Lazygit)' },
+    },
+  },
+
   { -- Adds git related signs to the gutter, as well as utilities for managing changes
     'lewis6991/gitsigns.nvim',
     ---@module 'gitsigns'
@@ -745,7 +826,7 @@ require('lazy').setup({
       formatters_by_ft = {
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
-        python = { 'ruff_fix', 'ruff_format', 'ruff_organize_imports' },
+        python = { 'ruff_fix', 'ruff_format' },
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
         -- javascript = { "prettierd", "prettier", stop_after_first = true },
@@ -999,34 +1080,35 @@ require('lazy').setup({
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
 
--- [[ Custom ML Workflow: Execute Python Cells ]]
--- This function identifies blocks of code bounded by `#%%` and sends them to Molten.
-local function evaluate_python_cell()
+-- [[ Custom ML Workflow: Execute Python Cells with Iron.nvim ]]
+local function evaluate_python_cell_iron()
   -- 1. Find the start of the cell (search backwards for #%%)
   local start_line = vim.fn.search('^#\\s*%%', 'bWn')
   if start_line == 0 then
-    start_line = 1 -- If no #%% above, start from the top of the file
+    start_line = 1
   else
-    start_line = start_line + 1 -- Start evaluating *after* the #%% line
+    start_line = start_line + 1
   end
 
   -- 2. Find the end of the cell (search forwards for #%%)
   local end_line = vim.fn.search('^#\\s*%%', 'Wn')
   if end_line == 0 then
-    end_line = vim.fn.line '$' -- If no #%% below, go to the end of the file
+    end_line = vim.fn.line '$'
   else
-    end_line = end_line - 1 -- End evaluating *before* the next #%% line
+    end_line = end_line - 1
   end
 
-  -- 3. Execute the range using Molten
+  -- 3. Extract the text and send it to Iron
   if start_line <= end_line then
-    -- MoltenEvaluateVisual accepts a line range in standard Vim command format
-    vim.cmd(tostring(start_line) .. ',' .. tostring(end_line) .. 'MoltenEvaluateVisual')
-    print('🚀 Evaluated cell: Lines ' .. start_line .. ' to ' .. end_line)
+    -- Get the lines from the buffer (API uses 0-based indexing for rows)
+    local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
+    -- Send the lines to the active Iron REPL
+    require('iron.core').send(nil, lines)
+    print('🚀 Sent cell to REPL: Lines ' .. start_line .. ' to ' .. end_line)
   else
     print '⚠️ No valid cell found.'
   end
 end
 
 -- Map Shift+Enter (<S-CR>) to run the cell in normal mode
-vim.keymap.set('n', '<S-CR>', evaluate_python_cell, { desc = 'Evaluate Python Cell (Molten)' })
+vim.keymap.set('n', '<S-CR>', evaluate_python_cell_iron, { desc = 'Evaluate Python Cell (Iron)' })
