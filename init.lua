@@ -267,6 +267,14 @@ require('lazy').setup({
     },
   },
 
+  {
+    'windwp/nvim-autopairs',
+    event = 'InsertEnter',
+    config = true,
+    -- use opts = {} for passing setup options
+    -- this is equivalent to setup({}) function
+  },
+
   { 'NMAC427/guess-indent.nvim', opts = {} },
 
   {
@@ -308,12 +316,23 @@ require('lazy').setup({
   {
     'nvim-neo-tree/neo-tree.nvim',
     version = '*',
+    lazy = false,
     dependencies = {
       'nvim-lua/plenary.nvim',
       'nvim-tree/nvim-web-devicons', -- for VS Code like file icons
       'MunifTanjim/nui.nvim',
     },
-    cmd = 'Neotree',
+    -- We deleted `cmd = 'Neotree'` here so it can load on startup!
+
+    -- Add this init function to automatically open the tree
+    init = function()
+      vim.api.nvim_create_autocmd('VimEnter', {
+        callback = function()
+          -- 'show' opens the tree without moving your cursor into it
+          vim.cmd 'Neotree focus'
+        end,
+      })
+    end,
     keys = {
       -- Map <leader>e to toggle the file explorer
       { '<leader>e', ':Neotree toggle<CR>', desc = 'Toggle [E]xplorer', silent = true },
@@ -352,7 +371,33 @@ require('lazy').setup({
       },
     },
   },
-
+  {
+    'zbirenbaum/copilot.lua',
+    cmd = 'Copilot',
+    event = 'InsertEnter',
+    config = function()
+      require('copilot').setup {
+        copilot_node_command = '/home/danishrtg/.nvm/versions/node/v24.14.1/bin/node',
+        panel = {
+          enabled = false, -- We disable the panel to keep things fast and UI-clean
+        },
+        suggestion = {
+          enabled = true,
+          auto_trigger = true,
+          keymap = {
+            -- We use Ctrl+l (or you can change it to <Right>) to accept suggestions.
+            -- This prevents Copilot from fighting with blink.cmp over your <Tab> or <Enter> keys!
+            accept = '<C-Tab>',
+            accept_word = '<M-Right>', -- Alt + Right Arrow to accept one word at a time
+            accept_line = false,
+            next = '<M-]>',
+            prev = '<M-[>',
+            dismiss = '<C-]>',
+          },
+        },
+      }
+    end,
+  },
   -- Alternatively, use `config = function() ... end` for full control over the configuration.
   -- If you prefer to call `setup` explicitly, use:
   --    {
@@ -503,11 +548,19 @@ require('lazy').setup({
         -- You can put your default mappings / updates / etc. in here
         --  All the info you're looking for is in `:help telescope.setup()`
         --
-        -- defaults = {
-        --   mappings = {
-        --     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
-        --   },
-        -- },
+        defaults = {
+          file_ignore_patterns = {
+            '%.git/',
+            '%.venv/',
+            'venv/',
+            'node_modules/',
+            '%.svelte%-kit/',
+            '__pycache__/',
+          },
+          -- mappings = {
+          --   i = { ['<c-enter>'] = 'to_fuzzy_refine' },
+          -- },
+        },
         -- pickers = {}
         extensions = {
           ['ui-select'] = { require('telescope.themes').get_dropdown() },
@@ -890,6 +943,7 @@ require('lazy').setup({
         --
         -- See :h blink-cmp-config-keymap for defining your own keymap
         preset = 'default',
+        ['<Tab>'] = { 'select_and_accept', 'fallback' },
 
         -- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
         --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
@@ -945,7 +999,33 @@ require('lazy').setup({
       -- Load the colorscheme here.
       -- Like many other themes, this one has different styles, and you could load
       -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-      vim.cmd.colorscheme 'tokyonight-night'
+      -- vim.cmd.colorscheme 'tokyonight-moon'
+    end,
+  },
+
+  {
+    'catppuccin/nvim',
+    name = 'catppuccin',
+    priority = 1000, -- Make sure to load this before all the other start plugins
+    config = function()
+      require('catppuccin').setup {
+        flavour = 'macchiato', -- Choose your variant: latte, frappe, macchiato, mocha
+        transparent_background = false, -- Change to true if you use a transparent Kitty terminal
+        integrations = {
+          -- Tell Catppuccin to specifically colorize our new plugins
+          blink_cmp = true,
+          gitsigns = true,
+          neotree = true,
+          treesitter = true,
+          telescope = {
+            enabled = true,
+          },
+          mason = true,
+        },
+      }
+
+      -- Activate the theme
+      vim.cmd.colorscheme 'catppuccin'
     end,
   },
 
@@ -1003,7 +1083,25 @@ require('lazy').setup({
     branch = 'main',
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter-intro`
     config = function()
-      local parsers = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'python' }
+      local parsers = {
+        'bash',
+        'c',
+        'diff',
+        'html',
+        'lua',
+        'luadoc',
+        'markdown',
+        'markdown_inline',
+        'query',
+        'vim',
+        'vimdoc',
+        'python',
+        'toml',
+        'json',
+        'svelte',
+        'javascript',
+        'typescript',
+      }
       require('nvim-treesitter').install(parsers)
       vim.api.nvim_create_autocmd('FileType', {
         callback = function(args)
