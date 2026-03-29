@@ -329,7 +329,7 @@ require('lazy').setup({
       vim.api.nvim_create_autocmd('VimEnter', {
         callback = function()
           -- 'show' opens the tree without moving your cursor into it
-          vim.cmd 'Neotree focus'
+          vim.cmd 'Neotree show'
         end,
       })
     end,
