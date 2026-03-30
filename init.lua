@@ -387,7 +387,7 @@ require('lazy').setup({
           keymap = {
             -- We use Ctrl+l (or you can change it to <Right>) to accept suggestions.
             -- This prevents Copilot from fighting with blink.cmp over your <Tab> or <Enter> keys!
-            accept = '<C-Tab>',
+            accept = '<S-Tab>',
             accept_word = '<M-Right>', -- Alt + Right Arrow to accept one word at a time
             accept_line = false,
             next = '<M-]>',
