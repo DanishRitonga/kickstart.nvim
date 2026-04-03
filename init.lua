@@ -1014,7 +1014,22 @@ require('lazy').setup({
     config = function()
       require('catppuccin').setup {
         flavour = 'macchiato', -- Choose your variant: latte, frappe, macchiato, mocha
-        transparent_background = false, -- Change to true if you use a transparent Kitty terminal
+        transparent_background = true, -- Change to true if you use a transparent Kitty terminal
+
+        custom_highlights = function(colors)
+          return {
+            -- Make the tree background solid (colors.mantle is a nice dark sidebar color)
+            NeoTreeNormal = { bg = colors.mantle },
+            NeoTreeNormalNC = { bg = colors.mantle },
+
+            -- Hide the empty line tildes (~) at the bottom of the tree
+            NeoTreeEndOfBuffer = { fg = colors.mantle, bg = colors.mantle },
+
+            -- Make the vertical separator blend perfectly into the sidebar
+            NeoTreeWinSeparator = { fg = colors.base, bg = colors.mantle },
+          }
+        end,
+
         integrations = {
           -- Tell Catppuccin to specifically colorize our new plugins
           blink_cmp = true,
@@ -1214,3 +1229,6 @@ end
 
 -- Map Shift+Enter (<S-CR>) to run the cell in normal mode
 vim.keymap.set('n', '<S-CR>', evaluate_python_cell_iron, { desc = 'Evaluate Python Cell (Iron)' })
+
+-- Easily escape terminal mode by double-tapping Escape
+vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
