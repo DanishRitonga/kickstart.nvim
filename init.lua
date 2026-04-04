@@ -164,6 +164,22 @@ vim.o.scrolloff = 10
 -- See `:help 'confirm'`
 vim.o.confirm = true
 
+-- Force Neovim to use OSC 52 for the clipboard (perfect for SSH)
+vim.g.clipboard = {
+  name = 'OSC 52',
+  copy = {
+    ['+'] = require('vim.ui.clipboard.osc52').copy '+',
+    ['*'] = require('vim.ui.clipboard.osc52').copy '*',
+  },
+  paste = {
+    ['+'] = require('vim.ui.clipboard.osc52').paste '+',
+    ['*'] = require('vim.ui.clipboard.osc52').paste '*',
+  },
+}
+
+-- Ensure Neovim syncs standard yanks to the system clipboard
+vim.opt.clipboard = 'unnamedplus'
+
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
 
@@ -449,6 +465,33 @@ require('lazy').setup({
         delete = { text = '_' }, ---@diagnostic disable-line: missing-fields
         topdelete = { text = '‾' }, ---@diagnostic disable-line: missing-fields
         changedelete = { text = '~' }, ---@diagnostic disable-line: missing-fields
+      },
+    },
+  },
+
+  {
+    'amitds1997/remote-nvim.nvim',
+    version = '*', -- Pin to GitHub releases
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      'MunifTanjim/nui.nvim',
+      'nvim-telescope/telescope.nvim',
+    },
+    opts = {
+      remote = {
+        copy_dirs = {
+          -- Override the default config copy settings
+          config = {
+            base = vim.fn.stdpath 'config',
+            name = 'config',
+            dirs = '*',
+            compression = {
+              enabled = true,
+              -- Tell tar to ignore the hidden .git folder during transfer
+              additional_opts = { '--exclude=.git' },
+            },
+          },
+        },
       },
     },
   },
