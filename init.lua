@@ -88,7 +88,7 @@ P.S. You can delete this when you're done too. It's your config now! :)
 -- See `:help mapleader`
 --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
 vim.g.mapleader = ' '
-vim.g.maplocalleader = ' '
+vim.g.maplocalleader = ','
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
 vim.g.have_nerd_font = true
@@ -330,6 +330,22 @@ require('lazy').setup({
   },
 
   {
+    '3rd/image.nvim',
+    -- No lazy loading; we want it ready to intercept image files immediately
+    lazy = false,
+    opts = {
+      backend = 'kitty',
+      integrations = {
+        -- This ensures it doesn't try to draw images over your autocomplete menus
+        cmp = { enabled = true },
+      },
+      max_width_window_percentage = 80,
+      max_height_window_percentage = 80,
+      window_overlap_clear_enabled = true, -- Clears image if you open a floating window over it
+    },
+  },
+
+  {
     'nvim-neo-tree/neo-tree.nvim',
     version = '*',
     lazy = false,
@@ -391,6 +407,25 @@ require('lazy').setup({
       },
     },
   },
+
+  -- plugin for editing LaTeX files
+  {
+    'lervag/vimtex',
+    lazy = false, -- We don't want to lazy-load VimTeX; it lazy-loads itself internally
+    init = function()
+      -- VimTeX configuration goes here, BEFORE the plugin is loaded
+
+      -- Tell VimTeX to use Zathura as the PDF viewer
+      vim.g.vimtex_view_method = 'zathura'
+
+      -- Tell VimTeX to use latexmk as the continuous compiler
+      vim.g.vimtex_compiler_method = 'latexmk'
+
+      -- (Optional) Disable quickfix window auto-popping if a minor warning occurs
+      vim.g.vimtex_quickfix_mode = 0
+    end,
+  },
+
   {
     'zbirenbaum/copilot.lua',
     cmd = 'Copilot',
